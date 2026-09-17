@@ -3,38 +3,38 @@
 # Collectd Default type
 
 class Type_Base {
-	var $datadir;
-	var $rrdtool;
-	var $rrdtool_opts = array();
-	var $rrd_url;
-	var $cache;
-	var $args;
-	var $seconds;
-	var $data_sources = array('value');
-	var $order;
-	var $legend = array();
-	var $colors = array();
-	var $rrd_title;
-	var $rrd_vertical;
-	var $rrd_format = '%5.1lf%s';
-	var $scale = 1;
-	var $base;
-	var $width;
-	var $height;
-	var $graph_type;
-	var $negative_io;
-	var $percentile = false;
-	var $graph_smooth;
-	var $graph_minmax;
+	public $datadir;
+	public $rrdtool;
+	public $rrdtool_opts = array();
+	public $rrd_url;
+	public $cache;
+	public $args;
+	public $seconds;
+	public $data_sources = array('value');
+	public $order;
+	public $legend = array();
+	public $colors = array();
+	public $rrd_title;
+	public $rrd_vertical;
+	public $rrd_format = '%5.1lf%s';
+	public $scale = 1;
+	public $base;
+	public $width;
+	public $height;
+	public $graph_type;
+	public $negative_io;
+	public $percentile = false;
+	public $graph_smooth;
+	public $graph_minmax;
 
-	var $files;
-	var $tinstances;
-	var $identifiers;
+	public $files;
+	public $tinstances;
+	public $identifiers;
 
-	var $flush_socket;
-	var $flush_type;
+	public $flush_socket;
+	public $flush_type;
 
-	function __construct($config, $_get) {
+	public function __construct($config, $_get) {
 		$this->datadir = $config['datadir'];
 		$this->rrdtool = $config['rrdtool'];
 		if (!empty($config['rrdtool_opts'])) {
@@ -72,14 +72,14 @@ class Type_Base {
 		$this->flush_type = $config['flush_type'];
 	}
 
-	function rainbow_colors() {
+	public function rainbow_colors() {
 		$c = 0;
 		$sources = count($this->rrd_get_sources());
 		foreach ($this->rrd_get_sources() as $ds) {
 			# hue (saturnation=1, value=1)
 			$h = $sources > 1 ? 360 - ($c * (330/($sources-1))) : 360;
 
-			$h = ($h %= 360) / 60;
+			$h = fmod($h, 360) / 60;
 			$f = $h - floor($h);
 			$q[0] = $q[1] = 0;
 			$q[2] = 1*(1-1*(1-$f));
@@ -88,7 +88,7 @@ class Type_Base {
 
 			$hex = '';
 			foreach(array(4,2,0) as $j) {
-				$hex .= sprintf('%02x', $q[(floor($h)+$j)%6] * 255);
+				$hex .= sprintf('%02x', (int)round($q[((int)floor($h)+$j)%6] * 255));
 			}
 			$this->colors[$ds] = $hex;
 			$c++;
@@ -96,7 +96,7 @@ class Type_Base {
 	}
 
 	# parse $_GET values
-	function parse_get($_get) {
+	public function parse_get($_get) {
 		$this->args = array(
 			'host' => isset($_get['h']) ? $_get['h'] : null,
 			'plugin' => isset($_get['p']) ? $_get['p'] : null,
@@ -108,14 +108,14 @@ class Type_Base {
 		$this->seconds = isset($_get['s']) ? $_get['s'] : null;
 	}
 
-	function validate_color($color) {
+	public function validate_color($color) {
 		if (!preg_match('/^[0-9a-f]{6}$/', $color))
 			return '000000';
 		else
 			return $color;
 	}
 
-	function get_faded_color($fgc, $bgc='ffffff', $percent=0.25) {
+	public function get_faded_color($fgc, $bgc='ffffff', $percent=0.25) {
 		$fgc = $this->validate_color($fgc);
 		if (!is_numeric($percent))
 			$percent=0.25;
@@ -130,7 +130,7 @@ class Type_Base {
 		$bg['b'] = hexdec(substr($bgc,4,2));
 
 		foreach ($rgb as $pri) {
-			$c[$pri] = dechex(round($percent * $fg[$pri]) + ((1.0 - $percent) * $bg[$pri]));
+			$c[$pri] = dechex((int)round($percent * $fg[$pri] + (1.0 - $percent) * $bg[$pri]));
 			if (strlen($c[$pri]) == 1) {
 				$c[$pri] = '0' . $c[$pri];
 			}
@@ -139,7 +139,7 @@ class Type_Base {
 		return $c['r'].$c['g'].$c['b'];
 	}
 
-	function rrd_escape($value) {
+	public function rrd_escape($value) {
 		# In case people have really bizarre URLs in $CONFIG['rrd_url'],
 		# it should not be dropped.
 		$value = str_replace('\\', '\\\\', $value);
@@ -147,7 +147,7 @@ class Type_Base {
 		return str_replace(':', '\:', $value);
 	}
 
-	function parse_filename($file) {
+	public function parse_filename($file) {
 		if ($this->graph_type == 'canvas') {
 			$file = str_replace($this->datadir . '/', '', $file);
 			$file = str_replace(
@@ -159,7 +159,7 @@ class Type_Base {
 		return $this->rrd_escape($file);
 	}
 
-	function rrd_files() {
+	public function rrd_files() {
 		$files = $this->get_filenames();
 
 		$this->tinstances = array();
@@ -185,25 +185,25 @@ class Type_Base {
 		ksort($this->identifiers);
 	}
 
-	function get_filenames() {
+	public function get_filenames() {
 		$identifier = sprintf('%s/%s%s%s%s%s/%s%s%s',
 			$this->args['host'],
 			$this->args['plugin'],
-			strlen($this->args['category']) ? '-' : '', $this->args['category'],
-			strlen($this->args['pinstance']) ? '-' : '', $this->args['pinstance'],
+			strlen($this->args['category'] ?? '') ? '-' : '', $this->args['category'],
+			strlen($this->args['pinstance'] ?? '') ? '-' : '', $this->args['pinstance'],
 			$this->args['type'],
-			strlen($this->args['tinstance']) ? '-' : '', $this->args['tinstance']
+			strlen($this->args['tinstance'] ?? '') ? '-' : '', $this->args['tinstance']
 		);
 		$identifier = preg_replace("/([*?[])/", '[$1]', $identifier);
 
-		$wildcard = strlen($this->args['tinstance']) ? '.' : '[-.]*';
+		$wildcard = strlen($this->args['tinstance'] ?? '') ? '.' : '[-.]*';
 
 		$files = glob($this->datadir .'/'. $identifier . $wildcard . 'rrd');
 
 		return $files ? $files : array();
 	}
 
-	function rrd_graph($debug = false) {
+	public function rrd_graph($debug = false) {
 		$this->collectd_flush();
 
 		$colors = $this->colors;
@@ -241,6 +241,34 @@ class Type_Base {
 			case 'svg':
 			case 'png':
 			default:
+				# bail early if no rrd files were found for this identifier
+				if (empty($this->files)) {
+					error_log(sprintf('CGP: no RRD files found for "%s/%s"',
+						$this->args['host'] ?? '', $this->args['plugin'] ?? ''));
+					error_image();
+					return;
+				}
+
+				$shellcmd = array_merge(
+					$this->rrd_graph_command($style),
+					$shellcmd
+				);
+				$shellcmd = implode(' ', $shellcmd);
+
+				# capture rrdtool output so a failure cannot corrupt the image stream
+				ob_start();
+				passthru($shellcmd . ' 2>/tmp/rrdtool_stderr', $exitcode);
+				$image_data = ob_get_clean();
+
+				if ($exitcode !== 0 || $image_data === '' || ($style !== 'svg' && substr($image_data, 0, 4) !== "\x89PNG")) {
+					$stderr = trim((string)@file_get_contents('/tmp/rrdtool_stderr'));
+					error_log(sprintf('CGP: rrdtool exited %d for "%s/%s"%s',
+						$exitcode, $this->args['host'] ?? '', $this->args['plugin'] ?? '',
+						$stderr !== '' ? ': ' . $stderr : ''));
+					error_image();
+					return;
+				}
+
 				# caching
 				if (is_numeric($this->cache) && $this->cache > 0)
 					header("Expires: " . date(DATE_RFC822,strtotime($this->cache." seconds")));
@@ -253,20 +281,12 @@ class Type_Base {
 					header('Content-Disposition: filename="' . $this->rrd_title . '.png"');
 				}
 
-				$shellcmd = array_merge(
-					$this->rrd_graph_command($style),
-					$shellcmd
-				);
-				$shellcmd = implode(' ', $shellcmd);
-				passthru($shellcmd, $exitcode);
-				if ($exitcode !== 0) {
-					header('HTTP/1.1 500 Internal Server Error');
-				}
+				echo $image_data;
 			break;
 		}
 	}
 
-	function rrd_graph_command($imgformat) {
+	public function rrd_graph_command($imgformat) {
 		if (!in_array($imgformat, array('png', 'svg')))
 			$imgformat = 'png';
 
@@ -278,7 +298,7 @@ class Type_Base {
 		);
 	}
 
-	function rrd_options() {
+	public function rrd_options() {
 		$rrdgraph = array();
 		foreach($this->rrdtool_opts as $opt)
 			$rrdgraph[] = $opt;
@@ -307,7 +327,7 @@ class Type_Base {
 		return $rrdgraph;
 	}
 
-	function rrd_get_sources() {
+	public function rrd_get_sources() {
 		# is the source spread over multiple files?
 		if (is_array($this->files) && count($this->files)>1) {
 			# and must it be ordered?
@@ -341,7 +361,7 @@ class Type_Base {
 		return $sources;
 	}
 
-	function parse_legend($sources) {
+	public function parse_legend($sources) {
 		# fill up legend by items that are not defined by plugin
 		$this->legend = $this->legend + array_combine($sources, $sources);
 
@@ -359,7 +379,7 @@ class Type_Base {
 		}
 	}
 
-	function socket_cmd($socket, $cmd) {
+	public function socket_cmd($socket, $cmd) {
 		$r = fwrite($socket, $cmd, strlen($cmd));
 		if ($r === false || $r != strlen($cmd)) {
 			error_log(sprintf('ERROR: Failed to write full command to unix-socket: %d out of %d written',
@@ -382,7 +402,7 @@ class Type_Base {
 	}
 
 	# tell collectd to FLUSH all data of the identifier(s)
-	function collectd_flush() {
+	public function collectd_flush() {
 		$identifier = $this->identifiers;
 
 		if (!$this->flush_socket)

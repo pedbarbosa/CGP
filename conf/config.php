@@ -81,11 +81,11 @@ $CONFIG['cache'] = 90;
 $CONFIG['page_refresh'] = '';
 
 # default width/height of the graphs
-$CONFIG['width'] = 400;
-$CONFIG['height'] = 175;
+$CONFIG['width'] = 500;
+$CONFIG['height'] = 200;
 # default width/height of detailed graphs
-$CONFIG['detail-width'] = 800;
-$CONFIG['detail-height'] = 350;
+$CONFIG['detail-width'] = 1000;
+$CONFIG['detail-height'] = 600;
 # max width/height of a graph (to prevent from OOM)
 $CONFIG['max-width'] = $CONFIG['detail-width'] * 2;
 $CONFIG['max-height'] = $CONFIG['detail-height'] * 2;

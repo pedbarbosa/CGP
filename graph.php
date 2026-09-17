@@ -61,10 +61,18 @@ if(function_exists('json_decode'))
 	}
 }
 
-if (!isset($plugin_json[$type]['type']))
+if (!is_array($plugin_json)) {
+	$plugin_json = array();
+}
+if (!isset($plugin_json[$type]['type'])) {
 	$plugin_json[$type]['type'] = 'default';
+}
 
 switch ($plugin_json[$type]['type']) {
+	case 'none':
+		# explicitly unsupported type — serve blank image silently
+		no_image();
+		exit;
 	case 'stacked':
 		require_once 'type/GenericStacked.class.php';
 		$obj = new Type_GenericStacked($CONFIG, GET());
@@ -108,7 +116,7 @@ if (isset($plugin_json[$type]['legend'])) {
 if (isset($plugin_json[$type]['title'])) {
 	$obj->rrd_title = str_replace(
 		array('{{PI}}', '{{TI}}', '{{HOST}}'),
-		array(GET('pi'), GET('ti'), GET('h')),
+		array(GET('pi') ?? '', GET('ti') ?? '', GET('h') ?? ''),
 		$plugin_json[$type]['title']
 	);
 }

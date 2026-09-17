@@ -4,7 +4,7 @@ require_once 'Base.class.php';
 
 class Type_Uptime extends Type_Base {
 
-	function rrd_gen_graph() {
+	public function rrd_gen_graph() {
 		$rrdgraph = $this->rrd_options();
 
 		$sources = $this->rrd_get_sources();

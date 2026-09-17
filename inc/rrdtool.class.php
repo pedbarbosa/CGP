@@ -1,9 +1,9 @@
 <?php
 
 class RRDTool {
-	var $rrdtool = '/usr/bin/rrdtool';
+	public $rrdtool = '/usr/bin/rrdtool';
 
-	function __construct($rrdtool) {
+	public function __construct($rrdtool) {
 		if (file_exists($rrdtool)) {
 			$this->rrdtool = $rrdtool;
 		} else {
@@ -12,7 +12,7 @@ class RRDTool {
 		}
 	}
 
-	function rrd_info($rrdfile) {
+	public function rrd_info($rrdfile) {
 		if (file_exists($rrdfile)) {
 			$raw_info = shell_exec(
 				escapeshellarg($this->rrdtool)

@@ -13,7 +13,10 @@ if (!$path) {
 if ( $file = validateRRDPath($CONFIG['datadir'], $path) ) {
 	header('Content-Type: application/octet-stream');
 	header('Content-Disposition: attachment; filename='.basename($file));
-	header("Expires: " .date(DATE_RFC822,strtotime($CONFIG['cache']." seconds")));
+	$expires = strtotime($CONFIG['cache'] . " seconds");
+	if ($expires !== false) {
+		header("Expires: " . date(DATE_RFC822, $expires));
+	}
 	if(ob_get_length()) ob_clean();
 	flush();
 	readfile($file);

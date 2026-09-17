@@ -71,10 +71,10 @@ function validateRRDPath($base, $path) {
 
 	$realpath = realpath(sprintf('%s/%s', $base, $path));
 
-	if (strpos($realpath, $base) === false)
+	if ($realpath === false || strpos($realpath, $base) === false)
 		return false;
 
-	if (strpos($realpath, $base) !== 0)
+	if ($realpath === false || strpos($realpath, $base) !== 0)
 		return false;
 
 	if (!preg_match('/\.rrd$/', $realpath))
@@ -90,5 +90,14 @@ function crc32hex($str) {
 function error_image() {
 	header("Content-Type: image/png", true, 400);
 	readfile('layout/error.png');
+	exit;
+}
+
+function no_image() {
+	# 1x1 transparent PNG — renders as nothing in the browser
+	header("Content-Type: image/png", true, 200);
+	echo base64_decode(
+		'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+	);
 	exit;
 }

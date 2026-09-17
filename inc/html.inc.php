@@ -330,6 +330,25 @@ function breadcrumbs() {
 	return $path;
 }
 
+# load and merge plugin json for a given plugin/type, return null if not found
+function get_plugin_type($plugin, $type) {
+	$plugin_json = null;
+	if (file_exists('plugin/'.$plugin.'.json')) {
+		$data = json_decode(file_get_contents('plugin/'.$plugin.'.json'), true);
+		if (is_array($data)) $plugin_json = $data;
+	}
+	if (file_exists('plugin/local/'.$plugin.'.json')) {
+		$data = json_decode(file_get_contents('plugin/local/'.$plugin.'.json'), true);
+		if (is_array($data)) {
+			$plugin_json = is_array($plugin_json)
+				? array_replace_recursive($plugin_json, $data)
+				: $data;
+		}
+	}
+	if (!is_array($plugin_json)) return 'default';
+	return isset($plugin_json[$type]['type']) ? $plugin_json[$type]['type'] : 'default';
+}
+
 # generate graph url's for a plugin of a host
 function graphs_from_plugin($host, $plugin, $overview=false) {
 	global $CONFIG;
@@ -351,6 +370,12 @@ function graphs_from_plugin($host, $plugin, $overview=false) {
 		}
 
 		$items['h'] = $host;
+
+		# skip types explicitly marked as unsupported
+		$graph_type = get_plugin_type($plugin, isset($items['t']) ? $items['t'] : '');
+		if ($graph_type === 'none') {
+			continue;
+		}
 
 		$time = array_key_exists($plugin, $CONFIG['time_range'])
 			? $CONFIG['time_range'][$plugin]
@@ -385,7 +410,7 @@ function build_url($base, $items, $s=NULL) {
 		$s = $CONFIG['time_range']['default'];
 
 	// Remove all empty values
-	$items = array_filter($items, 'strlen');
+	$items = array_filter($items, fn($v) => $v !== null && $v !== '');
 
 	if (!isset($items['s']))
 		$items['s'] = $s;

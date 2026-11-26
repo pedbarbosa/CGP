@@ -31,6 +31,9 @@ class Type_Base {
 	public $tinstances;
 	public $identifiers;
 
+	# draw the type from every plugin instance, with a line per instance
+	public $merge_instances = false;
+
 	public $flush_socket;
 	public $flush_type;
 
@@ -173,6 +176,16 @@ class Type_Base {
 				? substr($basename, strpos($basename,'-') + 1)
 				: 'value';
 
+			# name each line after its plugin instance, e.g. the disk, and
+			# its type instance too when the graph isn't for a single one
+			if ($this->merge_instances) {
+				$dirname = basename(dirname($filename));
+				$pinstance = substr($dirname, strpos($dirname, '-') + 1);
+				$instance = ($instance === 'value' || strlen($this->args['tinstance'] ?? ''))
+					? $pinstance
+					: $pinstance.'-'.$instance;
+			}
+
 			$this->tinstances[] = $instance;
 			$this->files[$instance] = $filename;
 			$this->identifiers[$instance] = preg_replace(
@@ -186,15 +199,28 @@ class Type_Base {
 	}
 
 	public function get_filenames() {
-		$identifier = sprintf('%s/%s%s%s%s%s/%s%s%s',
+		$glob_escape = fn($s) => preg_replace("/([*?[])/", '[$1]', (string)$s);
+
+		$plugin_dir = sprintf('%s/%s%s%s',
 			$this->args['host'],
 			$this->args['plugin'],
-			strlen($this->args['category'] ?? '') ? '-' : '', $this->args['category'],
-			strlen($this->args['pinstance'] ?? '') ? '-' : '', $this->args['pinstance'],
+			strlen($this->args['category'] ?? '') ? '-' : '', $this->args['category']
+		);
+		$type_file = sprintf('%s%s%s',
 			$this->args['type'],
 			strlen($this->args['tinstance'] ?? '') ? '-' : '', $this->args['tinstance']
 		);
-		$identifier = preg_replace("/([*?[])/", '[$1]', $identifier);
+
+		if ($this->merge_instances) {
+			# the same type in every plugin instance's directory
+			$identifier = $glob_escape($plugin_dir) . '-*/' . $glob_escape($type_file);
+		} else {
+			$identifier = $glob_escape(sprintf('%s%s%s/%s',
+				$plugin_dir,
+				strlen($this->args['pinstance'] ?? '') ? '-' : '', $this->args['pinstance'],
+				$type_file
+			));
+		}
 
 		$wildcard = strlen($this->args['tinstance'] ?? '') ? '.' : '[-.]*';
 

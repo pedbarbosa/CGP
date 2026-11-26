@@ -133,6 +133,37 @@ function collectd_plugindetail($host, $plugin, $detail, $where=NULL) {
 	return $return ? $return : false;
 }
 
+# load a plugin's json, with plugin/local/<plugin>.json merged over
+# plugin/<plugin>.json; returns an empty array when there is neither
+function load_plugin_json($plugin) {
+	static $cache = array();
+
+	if (isset($cache[$plugin]))
+		return $cache[$plugin];
+
+	$plugin_json = array();
+	foreach (array('plugin/'.$plugin.'.json', 'plugin/local/'.$plugin.'.json') as $file) {
+		if (!file_exists($file))
+			continue;
+		$data = json_decode(file_get_contents($file), true);
+		if (!is_array($data)) {
+			error_log('CGP Error: invalid json in '.$file);
+			continue;
+		}
+		$plugin_json = array_replace_recursive($plugin_json, $data);
+	}
+
+	return $cache[$plugin] = $plugin_json;
+}
+
+# whether a plugin's json sets 'merge_instances' for a type, to draw one graph
+# per type (and type instance) with a line per plugin instance, e.g. one
+# temperature graph for all disks instead of one per disk
+function merge_instances($plugin, $type) {
+	$plugin_json = load_plugin_json($plugin);
+	return !empty($plugin_json[$type]['merge_instances']);
+}
+
 # group plugin files for graph generation
 function group_plugindata($plugindata) {
 	global $CONFIG;
@@ -140,6 +171,12 @@ function group_plugindata($plugindata) {
 	$data = array();
 	# type instances should be grouped in 1 graph
 	foreach ($plugindata as $item) {
+		# plugin instances are merged into 1 graph per type instance instead
+		if (merge_instances($item['p'], $item['t'])) {
+			unset($item['pi']);
+			$data[] = $item;
+			continue;
+		}
 		# backwards compatibility
 		if ($CONFIG['version'] >= 5 || !preg_match('/^(df|interface)$/', $item['p']))
 			if (!(

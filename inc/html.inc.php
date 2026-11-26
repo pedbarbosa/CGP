@@ -332,20 +332,7 @@ function breadcrumbs() {
 
 # load and merge plugin json for a given plugin/type, return null if not found
 function get_plugin_type($plugin, $type) {
-	$plugin_json = null;
-	if (file_exists('plugin/'.$plugin.'.json')) {
-		$data = json_decode(file_get_contents('plugin/'.$plugin.'.json'), true);
-		if (is_array($data)) $plugin_json = $data;
-	}
-	if (file_exists('plugin/local/'.$plugin.'.json')) {
-		$data = json_decode(file_get_contents('plugin/local/'.$plugin.'.json'), true);
-		if (is_array($data)) {
-			$plugin_json = is_array($plugin_json)
-				? array_replace_recursive($plugin_json, $data)
-				: $data;
-		}
-	}
-	if (!is_array($plugin_json)) return 'default';
+	$plugin_json = load_plugin_json($plugin);
 	return isset($plugin_json[$type]['type']) ? $plugin_json[$type]['type'] : 'default';
 }
 

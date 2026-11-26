@@ -8,6 +8,7 @@ header("Content-Type: text/html");
 
 $host = GET('h');
 $plugin = GET('p');
+$seconds = GET('s');
 
 $selected_plugins = !$plugin ? $CONFIG['overview'] : array($plugin);
 
@@ -27,13 +28,17 @@ if (!strlen($host ?? '') || !$plugins = collectd_plugins($host)) {
 	return false;
 }
 
-plugins_list($host, $selected_plugins);
+plugins_list($host, $selected_plugins, $seconds);
 
 echo '<div class="graphs">';
+# one time range for all graphs on the page; without one, each plugin
+# uses its default from $CONFIG['time_range']
+time_range_list('host.php', array('h' => $host, 'p' => $plugin),
+	$seconds ?? ($plugin ? plugin_time_range($plugin) : $CONFIG['time_range']['default']));
 foreach ($selected_plugins as $selected_plugin) {
 	if (in_array($selected_plugin, $plugins)) {
 		plugin_header($host, $selected_plugin);
-		graphs_from_plugin($host, $selected_plugin, empty($plugin));
+		graphs_from_plugin($host, $selected_plugin, empty($plugin), $seconds);
 	}
 }
 echo '</div>';

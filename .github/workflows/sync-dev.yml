@@ -1,0 +1,51 @@
+name: Sync dev with master
+
+# dev is a long-lived branch for trying changes (docker-cgp builds its dev
+# image from it) before they go to master. After every push to master, bring
+# dev at least level with it:
+#   - dev has nothing master lacks: fast-forward dev to master
+#   - dev has its own commits too: merge master into dev (fails on conflicts)
+#   - dev is missing: create it from master
+# Never force-pushes.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-dev
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync dev with master
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          master=$(git rev-parse HEAD)
+
+          if ! git ls-remote --exit-code --heads origin dev >/dev/null; then
+            echo "dev is missing: creating it from master"
+            git push origin "$master:refs/heads/dev"
+          elif git merge-base --is-ancestor "$master" origin/dev; then
+            echo "dev already contains master: nothing to do"
+          elif git merge-base --is-ancestor origin/dev "$master"; then
+            echo "Fast-forwarding dev to master"
+            git push origin "$master:refs/heads/dev"
+          else
+            echo "dev has commits not on master: merging master into dev"
+            git switch -C dev origin/dev
+            git merge --no-ff -m "Merge master into dev" "$master"
+            git push origin dev
+          fi

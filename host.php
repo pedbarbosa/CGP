@@ -31,13 +31,18 @@ if (!strlen($host ?? '') || !$plugins = collectd_plugins($host)) {
 plugins_list($host, $selected_plugins, $seconds);
 
 echo '<div class="graphs">';
-# one time range for all graphs on the page; without one, each plugin
-# uses its default from $CONFIG['time_range']
-time_range_list('host.php', array('h' => $host, 'p' => $plugin),
-	$seconds ?? ($plugin ? plugin_time_range($plugin) : $CONFIG['time_range']['default']));
+$time_range_shown = false;
 foreach ($selected_plugins as $selected_plugin) {
 	if (in_array($selected_plugin, $plugins)) {
 		plugin_header($host, $selected_plugin);
+		# one time range for all graphs on the page, under the first header
+		# as on the detail page; without one, each plugin uses its default
+		# from $CONFIG['time_range']
+		if (!$time_range_shown) {
+			time_range_list('host.php', array('h' => $host, 'p' => $plugin),
+				$seconds ?? ($plugin ? plugin_time_range($plugin) : $CONFIG['time_range']['default']));
+			$time_range_shown = true;
+		}
 		graphs_from_plugin($host, $selected_plugin, empty($plugin), $seconds);
 	}
 }

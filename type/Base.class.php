@@ -255,13 +255,17 @@ class Type_Base {
 				);
 				$shellcmd = implode(' ', $shellcmd);
 
-				# capture rrdtool output so a failure cannot corrupt the image stream
+				# capture rrdtool output so a failure cannot corrupt the image stream,
+				# and its stderr in a file of its own so concurrent graphs don't
+				# overwrite each other's errors
+				$stderr_file = tempnam(sys_get_temp_dir(), 'cgp-rrdtool-');
 				ob_start();
-				passthru($shellcmd . ' 2>/tmp/rrdtool_stderr', $exitcode);
+				passthru($shellcmd . ' 2>' . escapeshellarg($stderr_file), $exitcode);
 				$image_data = ob_get_clean();
+				$stderr = trim((string)@file_get_contents($stderr_file));
+				@unlink($stderr_file);
 
 				if ($exitcode !== 0 || $image_data === '' || ($style !== 'svg' && substr($image_data, 0, 4) !== "\x89PNG")) {
-					$stderr = trim((string)@file_get_contents('/tmp/rrdtool_stderr'));
 					error_log(sprintf('CGP: rrdtool exited %d for "%s/%s"%s',
 						$exitcode, $this->args['host'] ?? '', $this->args['plugin'] ?? '',
 						$stderr !== '' ? ': ' . $stderr : ''));

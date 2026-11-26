@@ -36,34 +36,7 @@ if ($plugin == 'aggregation') {
 }
 
 # plugin json
-if(function_exists('json_decode'))
-{
-	$plugin_json = null;
-	if (file_exists('plugin/'.$plugin.'.json')) {
-		$json = file_get_contents('plugin/'.$plugin.'.json');
-		$plugin_json = json_decode($json, true);
-
-		if (is_null($plugin_json))
-			error_log('CGP Error: invalid json in plugin/'.$plugin.'.json');
-	}
-	if (file_exists('plugin/local/'.$plugin.'.json')) {
-		$json = file_get_contents('plugin/local/'.$plugin.'.json');
-		$plugin_json_local = json_decode($json, true);
-
-		if (is_null($plugin_json_local))
-			error_log('CGP Error: invalid json in plugin/local/'.$plugin.'.json');
-
-		if (is_array($plugin_json)) {
-			$plugin_json = array_replace_recursive($plugin_json, $plugin_json_local);
-		} else {
-			$plugin_json = $plugin_json_local;
-		}
-	}
-}
-
-if (!is_array($plugin_json)) {
-	$plugin_json = array();
-}
+$plugin_json = load_plugin_json($plugin);
 if (!isset($plugin_json[$type]['type'])) {
 	$plugin_json[$type]['type'] = 'default';
 }
@@ -96,11 +69,22 @@ if (isset($aggr) && $aggr) {
 	$_GET['pi'] = GET('pi', $pi[1]);
 }
 
+# a graph without a plugin instance draws that type from every plugin instance
+if ((GET('pi') ?? '') === '' && merge_instances($plugin, $type)) {
+	$obj->merge_instances = true;
+	$obj->rrd_files();
+}
+
 if (isset($typesdb[$type])) {
 	$obj->data_sources = array();
 	foreach ($typesdb[$type] as $ds => $property) {
 		$obj->data_sources[] = $ds;
 	}
+}
+
+# draw only some of the type's data sources, e.g. one line per disk instead of four
+if (isset($plugin_json[$type]['data_sources'])) {
+	$obj->data_sources = (array)$plugin_json[$type]['data_sources'];
 }
 
 if (isset($plugin_json[$type]['legend'])) {
@@ -145,8 +129,9 @@ if (isset($plugin_json[$type]['datasize']) and $plugin_json[$type]['datasize'])
 if ($type == 'if_octets')
 	$obj->percentile = $CONFIG['percentile'];
 
+# as a plain decimal, since rrdtool doesn't read PHP's exponent notation (1.2E-5)
 if (isset($plugin_json[$type]['scale']))
-	$obj->scale = $plugin_json[$type]['scale'];
+	$obj->scale = rtrim(rtrim(sprintf('%.15F', $plugin_json[$type]['scale']), '0'), '.');
 
 if (isset($plugin_json[$type]['base']))
 	$obj->base = $plugin_json[$type]['base'];
